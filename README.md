@@ -1,12 +1,15 @@
 # dazum
 
-A zoomifier program made with Raylib.
+dazum is a zoom application that aims to be a nice zoom tool for any OS. It is inspired by [boomer](https://github.com/tsoding/boomer) made with [raylib](https://github.com/raysan5/raylib).
+
 ## Requirements
 
 - C compiler (clang, gcc, cc)
 - make
 - [raylib 5.0](https://github.com/raysan5/raylib)
 - [stb_image_write.h](https://github.com/nothings/stb/blob/master/stb_image_write.h)
+
+
 ## Installation
 
 Clone the repository and build the program
@@ -21,6 +24,7 @@ It will create `dazum`, you can run it with
 ```bash
 ./dazum
 ```
+
 ## Features
 
 |Control|Description|
@@ -33,6 +37,7 @@ It will create `dazum`, you can run it with
 |<kbd>Mouse Wheel Down</kbd>|Zoom out|
 |<kbd>Ctrl</kbd> + <kbd>Mouse Button Up</kbd>|Increase flashlight radius|
 |<kbd>Ctrl</kbd> + <kbd>Mouse Button Down</kbd>|Decrease flashlight radius|
+
 ## Contributing
 
 If you find any bug or have any suggestion, please open an issue [here](https://github.com/SrVariable/dazum/issues).
