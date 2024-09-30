@@ -1,4 +1,64 @@
 #include "dazum.h"
+#include "raylib.h"
+
+Camera2D init_camera(void)
+{
+	Camera2D camera;
+
+	camera.offset = (Vector2){0, 0};
+	camera.target = (Vector2){0, 0};
+	camera.rotation = 0.0f;
+	camera.zoom = 1.0f;
+	return (camera);
+}
+
+Vector2 custom_get_mouse_position(void)
+{
+	int originalMousePositionX;
+	int originalMousePositionY;
+	get_mouse_position(&originalMousePositionX, &originalMousePositionY);
+	return ((Vector2){
+		(float)originalMousePositionX,
+		(float)originalMousePositionY,
+	});
+}
+
+void reset_camera(Camera2D *camera)
+{
+	camera->target = (Vector2){0, 0};
+	camera->offset = (Vector2){0, 0};
+	camera->zoom = 1.0f;
+}
+
+void drag_position(Camera2D *camera)
+{
+	Vector2 delta = GetMouseDelta();
+	delta.x *= -1.0f / camera->zoom;
+	delta.y *= -1.0f / camera->zoom;
+	camera->target.x += delta.x;
+	camera->target.y += delta.y;
+}
+
+void handle_zoom(Camera2D *camera, float *flashlightRadius, bool isFlashlightMode)
+{
+	float mouseMovement = GetMouseWheelMove();
+	if (IsKeyDown(KEY_LEFT_CONTROL) && isFlashlightMode)
+	{
+		if (mouseMovement > 0 && *flashlightRadius > FLASHLIGHT_ZOOM_DELTA)
+			*flashlightRadius -= FLASHLIGHT_ZOOM_DELTA;
+		else if (mouseMovement < 0)
+			*flashlightRadius += FLASHLIGHT_ZOOM_DELTA;
+	}
+	else if (mouseMovement != 0)
+	{
+		camera->target = GetScreenToWorld2D(custom_get_mouse_position(), *camera);
+		camera->offset = custom_get_mouse_position();
+		if (mouseMovement > 0)
+			camera->zoom += CAMERA_ZOOM_DELTA;
+		else if (mouseMovement < 0 && camera->zoom > CAMERA_ZOOM_DELTA)
+			camera->zoom -= CAMERA_ZOOM_DELTA;
+	}
+}
 
 #ifdef _WIN32
 int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
@@ -51,13 +111,20 @@ int main(void)
 	int screenSizeLoc = GetShaderLocation(flashlightShader, "screenSize");
 	while (!WindowShouldClose() && !IsKeyPressed(KEY_Q))
 	{
-		if (showCursor) ShowCursor();
-		else HideCursor();
-		if (IsMouseButtonDown(MOUSE_BUTTON_LEFT)) drag_position(&camera);
-		if (IsKeyPressed(KEY_ZERO)) reset_camera(&camera);
-		else if (IsKeyPressed(KEY_F)) isFlashlightMode = !isFlashlightMode;
-		else if (IsKeyPressed(KEY_C)) showCursor = !showCursor;
-		else handle_zoom(&camera, &flashlightRadius.x, isFlashlightMode);
+		if (showCursor)
+			ShowCursor();
+		else
+			HideCursor();
+		if (IsMouseButtonDown(MOUSE_BUTTON_LEFT))
+			drag_position(&camera);
+		if (IsKeyPressed(KEY_ZERO))
+			reset_camera(&camera);
+		else if (IsKeyPressed(KEY_F))
+			isFlashlightMode = !isFlashlightMode;
+		else if (IsKeyPressed(KEY_C))
+			showCursor = !showCursor;
+		else
+			handle_zoom(&camera, &flashlightRadius.x, isFlashlightMode);
 		BeginDrawing();
 		BeginMode2D(camera);
 		ClearBackground(backgroundColor);
