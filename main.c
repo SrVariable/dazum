@@ -1,7 +1,8 @@
-#include "raylib.h"
 #include "dazum.h"
+#include "raylib.h"
 
-Camera2D init_camera(void)
+Camera2D
+init_camera(void)
 {
 	Camera2D camera;
 
@@ -47,8 +48,11 @@ void handle_zoom(Camera2D *camera, float *flashlightRadius, bool isFlashlight)
 			camera->zoom -= CAMERA_ZOOM_DELTA;
 	}
 }
-
+#ifdef _WIN32
+int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
+#else
 int main(void)
+#endif
 {
 	const int width = get_screen_width();
 	const int height = get_screen_height();
