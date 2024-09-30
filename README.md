@@ -1,6 +1,6 @@
 # dazum
 
-dazum is a zoom application that aims to be a nice zoom tool for any OS. It is inspired by [boomer](https://github.com/tsoding/boomer) made with [raylib](https://github.com/raysan5/raylib).
+dazum is a zoom application that aims to be a nice zoom tool for any OS. Inspired by [boomer](https://github.com/tsoding/boomer) and made with [raylib](https://github.com/raysan5/raylib).
 
 ## Preview
 
