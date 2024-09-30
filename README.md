@@ -2,6 +2,10 @@
 
 dazum is a zoom application that aims to be a nice zoom tool for any OS. It is inspired by [boomer](https://github.com/tsoding/boomer) made with [raylib](https://github.com/raysan5/raylib).
 
+## Preview
+
+[preview.webm](https://github.com/user-attachments/assets/470907d9-ae95-44d1-b0a6-733742cf12b5)
+
 ## Requirements
 
 - C compiler (clang, gcc, cc)
