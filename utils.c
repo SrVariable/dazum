@@ -66,6 +66,7 @@ int get_screen_width(void)
 	if (!display)
 		return (0);
 	int width = XDisplayWidth(display, 0);
+	XCloseDisplay(display);
 	return (width);
 #elif _WIN32
 	return (GetSystemMetrics(SM_CXSCREEN));
