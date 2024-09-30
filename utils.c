@@ -1,11 +1,63 @@
-#define STD_IMAGE_WRITE_IMPLEMENTATION
-#include "stb_image_write.h"
-#ifdef __linux__
-#include "X11/Xlib.h"
-#elif _WIN32
-#include <windows.h>
-#include <stdlib.h>
-#endif
+#include "dazum.h"
+
+Camera2D init_camera(void)
+{
+	Camera2D camera;
+
+	camera.offset = (Vector2){0, 0};
+	camera.target = (Vector2){0, 0};
+	camera.rotation = 0.0f;
+	camera.zoom = 1.0f;
+	return (camera);
+}
+
+Vector2 custom_get_mouse_position(void)
+{
+	int originalMousePositionX;
+	int originalMousePositionY;
+	get_mouse_position(&originalMousePositionX, &originalMousePositionY);
+	return ((Vector2){
+		(float)originalMousePositionX,
+		(float)originalMousePositionY,
+	});
+}
+
+void reset_camera(Camera2D *camera)
+{
+	camera->target = (Vector2){0, 0};
+	camera->offset = (Vector2){0, 0};
+	camera->zoom = 1.0f;
+}
+
+void drag_position(Camera2D *camera)
+{
+	Vector2 delta = GetMouseDelta();
+	delta.x *= -1.0f / camera->zoom;
+	delta.y *= -1.0f / camera->zoom;
+	camera->target.x += delta.x;
+	camera->target.y += delta.y;
+}
+
+void handle_zoom(Camera2D *camera, float *flashlightRadius, bool isFlashlightMode)
+{
+	float mouseMovement = GetMouseWheelMove();
+	if (IsKeyDown(KEY_LEFT_CONTROL) && isFlashlightMode)
+	{
+		if (mouseMovement > 0 && *flashlightRadius > FLASHLIGHT_ZOOM_DELTA)
+			*flashlightRadius -= FLASHLIGHT_ZOOM_DELTA;
+		else if (mouseMovement < 0)
+			*flashlightRadius += FLASHLIGHT_ZOOM_DELTA;
+	}
+	else if (mouseMovement != 0)
+	{
+		camera->target = GetScreenToWorld2D(custom_get_mouse_position(), *camera);
+		camera->offset = custom_get_mouse_position();
+		if (mouseMovement > 0)
+			camera->zoom += CAMERA_ZOOM_DELTA;
+		else if (mouseMovement < 0 && camera->zoom > CAMERA_ZOOM_DELTA)
+			camera->zoom -= CAMERA_ZOOM_DELTA;
+	}
+}
 
 int get_screen_width(void)
 {

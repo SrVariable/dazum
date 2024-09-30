@@ -1,53 +1,5 @@
 #include "dazum.h"
-#include "raylib.h"
 
-Camera2D
-init_camera(void)
-{
-	Camera2D camera;
-
-	camera.offset = (Vector2){0, 0};
-	camera.target = (Vector2){0, 0};
-	camera.rotation = 0.0f;
-	camera.zoom = 1.0f;
-	return (camera);
-}
-
-Vector2 custom_get_mouse_position()
-{
-	int originalMousePositionX;
-	int originalMousePositionY;
-	get_mouse_position(&originalMousePositionX, &originalMousePositionY);
-	return ((Vector2){
-		(float)originalMousePositionX,
-		(float)originalMousePositionY,
-	});
-}
-
-void reset_camera(Camera2D *camera)
-{
-	camera->target = (Vector2){0, 0};
-	camera->zoom = 1.0f;
-}
-
-void handle_zoom(Camera2D *camera, float *flashlightRadius, bool isFlashlight)
-{
-	float mouseMovement = GetMouseWheelMove();
-	if (IsKeyDown(KEY_LEFT_CONTROL) && isFlashlight)
-	{
-		if (mouseMovement > 0 && *flashlightRadius > FLASHLIGHT_ZOOM_DELTA)
-			*flashlightRadius -= FLASHLIGHT_ZOOM_DELTA;
-		else if (mouseMovement < 0)
-			*flashlightRadius += FLASHLIGHT_ZOOM_DELTA;
-	}
-	else
-	{
-		if (mouseMovement > 0)
-			camera->zoom += CAMERA_ZOOM_DELTA;
-		else if (mouseMovement < 0 && camera->zoom > CAMERA_ZOOM_DELTA)
-			camera->zoom -= CAMERA_ZOOM_DELTA;
-	}
-}
 #ifdef _WIN32
 int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 #else
@@ -76,9 +28,7 @@ int main(void)
 	SetMouseCursor(MOUSE_CURSOR_CROSSHAIR);
 	Camera2D camera = init_camera();
 	Texture texture = LoadTexture(filename);
-	Vector2 pin = camera.target;
-	bool isDragging = false;
-	bool isFlashlight = false;
+	bool isFlashlightMode = false;
 	bool showCursor = true;
 	RenderTexture target = LoadRenderTexture(width, height);
 	const char *fsCode = "#version 330 core\n"
@@ -101,36 +51,18 @@ int main(void)
 	int screenSizeLoc = GetShaderLocation(flashlightShader, "screenSize");
 	while (!WindowShouldClose() && !IsKeyPressed(KEY_Q))
 	{
-		if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT) || IsKeyPressed(KEY_Z))
-		{
-			pin = GetScreenToWorld2D(custom_get_mouse_position(), camera);
-			isDragging = true;
-		}
-		if (IsMouseButtonReleased(MOUSE_BUTTON_LEFT))
-			isDragging = false;
-		if (isDragging)
-		{
-			Vector2 currentMousePosition = custom_get_mouse_position();
-			camera.target.x = pin.x - (currentMousePosition.x) / camera.zoom;
-			camera.target.y = pin.y - (currentMousePosition.y) / camera.zoom;
-		}
-		if (IsKeyPressed(KEY_ZERO))
-			reset_camera(&camera);
-		else if (IsKeyPressed(KEY_F))
-			isFlashlight = !isFlashlight;
-		else if (IsKeyPressed(KEY_C))
-			showCursor = !showCursor;
-		else
-			handle_zoom(&camera, &flashlightRadius.x, isFlashlight);
-		if (showCursor)
-			ShowCursor();
-		else
-			HideCursor();
+		if (showCursor) ShowCursor();
+		else HideCursor();
+		if (IsMouseButtonDown(MOUSE_BUTTON_LEFT)) drag_position(&camera);
+		if (IsKeyPressed(KEY_ZERO)) reset_camera(&camera);
+		else if (IsKeyPressed(KEY_F)) isFlashlightMode = !isFlashlightMode;
+		else if (IsKeyPressed(KEY_C)) showCursor = !showCursor;
+		else handle_zoom(&camera, &flashlightRadius.x, isFlashlightMode);
 		BeginDrawing();
 		BeginMode2D(camera);
 		ClearBackground(backgroundColor);
 		DrawTexture(texture, 0, 0, WHITE);
-		if (isFlashlight)
+		if (isFlashlightMode)
 		{
 			SetShaderValue(flashlightShader, circleCenterLoc, &flashlightCenter, SHADER_UNIFORM_VEC2);
 			SetShaderValue(flashlightShader, circleRadiusLoc, &flashlightRadius, SHADER_UNIFORM_FLOAT);
