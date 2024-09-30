@@ -8,11 +8,16 @@ dazum is a zoom application that aims to be a nice zoom tool for any OS. Inspire
 
 ## Requirements
 
+- git
 - C compiler (clang, gcc, cc)
 - make
 - [raylib 5.0](https://github.com/raysan5/raylib)
 - [stb_image_write.h](https://github.com/nothings/stb/blob/master/stb_image_write.h)
 
+On Linux (Debian/Ubuntu) running this should be enough:
+```bash
+sudo apt install git build-essential libx11-dev
+```
 
 ## Installation
 
