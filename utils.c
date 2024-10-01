@@ -1,18 +1,94 @@
-#define STD_IMAGE_WRITE_IMPLEMENTATION
-#include "stb_image_write.h"
-#ifdef __linux__
-#include "X11/Xlib.h"
+#include "dazum.h"
+
+Camera2D init_camera(void)
+{
+	Camera2D camera;
+
+	camera.offset = (Vector2){0, 0};
+	camera.target = (Vector2){0, 0};
+	camera.rotation = 0.0f;
+	camera.zoom = 1.0f;
+	return (camera);
+}
+
+void reset_camera(Camera2D *camera)
+{
+	camera->target = (Vector2){0, 0};
+	camera->offset = (Vector2){0, 0};
+	camera->zoom = 1.0f;
+}
+
+void get_mouse_position(int *x, int *y)
+{
+#ifdef __linux
+	Display *display = XOpenDisplay(NULL);
+	if (!display)
+	{
+		fprintf(stderr, "ERROR: Couldn't open display\n");
+		return ;
+	}
+	Window root = RootWindow(display, 0);
+	unsigned int mask;
+	XQueryPointer(display, root, &root, &root, x, y, x, y, &mask);
+	XCloseDisplay(display);
 #elif _WIN32
-#include <windows.h>
-#include <stdlib.h>
+	POINT point;
+	GetCursorPos(&point);
+	*x = point.x;
+	*y = point.y;
 #endif
+}
+
+Vector2 custom_get_mouse_position(void)
+{
+	int originalMousePositionX = 0;
+	int originalMousePositionY = 0;
+	get_mouse_position(&originalMousePositionX, &originalMousePositionY);
+	return ((Vector2){
+		(float)originalMousePositionX,
+		(float)originalMousePositionY,
+	});
+}
+
+void drag_position(Camera2D *camera)
+{
+	Vector2 delta = GetMouseDelta();
+	delta.x *= -1.0f / camera->zoom;
+	delta.y *= -1.0f / camera->zoom;
+	camera->target.x += delta.x;
+	camera->target.y += delta.y;
+}
+
+void handle_zoom(Camera2D *camera, float *flashlightRadius, bool isFlashlightMode)
+{
+	float mouseMovement = GetMouseWheelMove();
+	if (IsKeyDown(KEY_LEFT_CONTROL) && isFlashlightMode)
+	{
+		if (mouseMovement > 0 && *flashlightRadius > FLASHLIGHT_ZOOM_DELTA)
+			*flashlightRadius -= FLASHLIGHT_ZOOM_DELTA;
+		else if (mouseMovement < 0)
+			*flashlightRadius += FLASHLIGHT_ZOOM_DELTA;
+	}
+	else if (mouseMovement != 0)
+	{
+		camera->target = GetScreenToWorld2D(custom_get_mouse_position(), *camera);
+		camera->offset = custom_get_mouse_position();
+		if (mouseMovement > 0)
+			camera->zoom += CAMERA_ZOOM_DELTA;
+		else if (mouseMovement < 0 && camera->zoom > CAMERA_ZOOM_DELTA)
+			camera->zoom -= CAMERA_ZOOM_DELTA;
+	}
+}
 
 int get_screen_width(void)
 {
 #ifdef __linux__
 	Display *display = XOpenDisplay(NULL);
 	if (!display)
+	{
+		fprintf(stderr, "ERROR: Couldn't open display\n");
 		return (0);
+	}
 	int width = XDisplayWidth(display, 0);
 	XCloseDisplay(display);
 	return (width);
@@ -26,7 +102,10 @@ int get_screen_height(void)
 #ifdef __linux__
 	Display *display = XOpenDisplay(NULL);
 	if (!display)
+	{
+		fprintf(stderr, "ERROR: Couldn't open display\n");
 		return (0);
+	}
 	int height = XDisplayHeight(display, 0);
 	XCloseDisplay(display);
 	return (height);
@@ -35,25 +114,7 @@ int get_screen_height(void)
 #endif
 }
 
-void get_mouse_position(int *x, int *y)
-{
-#ifdef __linux
-	Display *display = XOpenDisplay(NULL);
-	if (!display)
-		return;
-	Window root = RootWindow(display, 0);
-	unsigned int mask;
-	XQueryPointer(display, root, &root, &root, x, y, x, y, &mask);
-	XCloseDisplay(display);
-#elif _WIN32
-	POINT point;
-	GetCursorPos(&point);
-	*x = point.x;
-	*y = point.y;
-#endif
-}
-
-void convert_to_rgba(unsigned char *data, const int width, const int height, const int stride)
+static void convert_to_rgba(unsigned char *data, const int width, const int height, const int stride)
 {
 	for (int y = 0; y < height; ++y)
 	{
@@ -79,7 +140,10 @@ int take_screenshot(const char *filename, const int width, const int height)
 #ifdef __linux__
 	Display *display = XOpenDisplay(NULL);
 	if (!display)
+	{
+		fprintf(stderr, "ERROR: Couldn't open display\n");
 		return (1);
+	}
 	Window root = RootWindow(display, 0);
 	XImage *image = XGetImage(display, root, 0, 0, width, height, AllPlanes, ZPixmap);
 	if (!image)
@@ -87,35 +151,62 @@ int take_screenshot(const char *filename, const int width, const int height)
 		XFree(image->data);
 		XFree(image);
 		XCloseDisplay(display);
+		fprintf(stderr, "ERROR: Couldn't get image\n");
 		return (1);
 	}
 	unsigned char *data = (unsigned char *)image->data;
 	convert_to_rgba(data, width, height, stride);
-	stbi_write_png(filename, width, height, comps, data, stride);
+	int status = !stbi_write_png(filename, width, height, comps, data, stride);
 	XFree(image->data);
 	XFree(image);
 	XCloseDisplay(display);
 #elif _WIN32
-	unsigned char *data = (unsigned char *)malloc(stride * height);
 	HDC hdc = GetDC(NULL);
+	if (!hdc)
+	{
+		fprintf(stderr, "ERROR: Couldn't get device context\n");
+		return (1);
+	}
 	HDC memdc = CreateCompatibleDC(hdc);
+	if (!memdc)
+	{
+		ReleaseDC(NULL, hdc);
+		return (1);
+	}
 	HBITMAP bitmap = CreateCompatibleBitmap(hdc, width, height);
+	if (!bitmap)
+	{
+		DeleteDC(memdc);
+		ReleaseDC(NULL, hdc);
+		fprintf(stderr, "ERROR: Couldn't create bitmap\n");
+		return (1);
+	}
 	SelectObject(memdc, bitmap);
 	BitBlt(memdc, 0, 0, width, height, hdc, 0, 0, SRCCOPY);
 	BITMAPINFOHEADER bi = {0};
 	bi.biSize = sizeof(BITMAPINFOHEADER);
 	bi.biWidth = width;
-	bi.biHeight = -height;
+	bi.biHeight = -height; // Negative value is to flip vertically
 	bi.biPlanes = 1;
 	bi.biBitCount = 32;
 	bi.biCompression = BI_RGB;
+	unsigned char *data = malloc(stride * height);
+	if (!data)
+	{
+		DeleteObject(bitmap);
+		DeleteDC(memdc);
+		ReleaseDC(NULL, hdc);
+		fprintf(stderr, "ERROR: Couldn't allocate memory\n");
+		return (1);
+	}
 	GetDIBits(memdc, bitmap, 0, height, data, (BITMAPINFO *)&bi, DIB_RGB_COLORS);
 	convert_to_rgba(data, width, height, stride);
-	stbi_write_png(filename, width, height, comps, data, stride);
+	int status = !stbi_write_png(filename, width, height, comps, data, stride);
 	free(data);
 	DeleteObject(bitmap);
 	DeleteDC(memdc);
 	ReleaseDC(NULL, hdc);
 #endif
-	return (0);
+	if (status) fprintf(stderr, "Couldn't create '%s'\n", filename);
+	return (status);
 }
