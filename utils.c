@@ -1,7 +1,10 @@
 #define STD_IMAGE_WRITE_IMPLEMENTATION
 #include "stb_image_write.h"
+
 #ifdef __linux__
 #include "X11/Xlib.h"
+#include <stdio.h>
+#include <string.h>
 #elif _WIN32
 #include <windows.h>
 #include <stdlib.h>
@@ -118,4 +121,23 @@ int take_screenshot(const char *filename, const int width, const int height)
 	ReleaseDC(NULL, hdc);
 #endif
 	return (0);
+}
+
+int save_to_clipboard(const char *text) {
+#ifdef __linux__
+		const int size = 64;
+		char cmd[size];
+		bzero(cmd, size);
+
+		int ret = snprintf(cmd, size, "echo -n '%s' | xclip -selection clipboard", text);
+		if (ret < 0 || ret > size)
+		{
+			return (1);
+		}
+
+		system(cmd);
+
+		return 0;
+#elif _WIN32
+#endif
 }

@@ -1,3 +1,5 @@
+#include <string.h>
+
 #include "dazum.h"
 #include "raylib.h"
 
@@ -79,15 +81,19 @@ int main(void)
 		fprintf(stderr, "An error ocurred while taking the screenshot\n");
 		return (1);
 	}
+
 	Color backgroundColor = GetColor(0x101010FF);
 	Vector2 originalMousePosition = custom_get_mouse_position();
 	SetConfigFlags(FLAG_FULLSCREEN_MODE);
 	InitWindow(width, height, "dazum");
 	SetMousePosition(originalMousePosition.x, originalMousePosition.y);
 	SetTargetFPS(60);
-	SetMouseCursor(MOUSE_CURSOR_CROSSHAIR);
+	SetMouseCursor(MOUSE_CURSOR_DEFAULT);
 	Camera2D camera = init_camera();
-	Texture texture = LoadTexture(filename);
+
+	Image image = LoadImage(filename);
+	Texture texture = LoadTextureFromImage(image);
+
 	bool isFlashlightMode = false;
 	bool showCursor = true;
 	RenderTexture target = LoadRenderTexture(width, height);
@@ -109,6 +115,7 @@ int main(void)
 	int circleCenterLoc = GetShaderLocation(flashlightShader, "flashlightCenter");
 	int circleRadiusLoc = GetShaderLocation(flashlightShader, "flashlightRadius");
 	int screenSizeLoc = GetShaderLocation(flashlightShader, "screenSize");
+
 	while (!WindowShouldClose() && !IsKeyPressed(KEY_Q))
 	{
 		if (showCursor)
@@ -121,13 +128,32 @@ int main(void)
 			reset_camera(&camera);
 		else if (IsKeyPressed(KEY_F))
 			isFlashlightMode = !isFlashlightMode;
+		else if (IsKeyDown(KEY_LEFT_SHIFT) && IsKeyPressed(KEY_C))
+		{
+				Vector2 mousePosition = GetScreenToWorld2D(GetMousePosition(), camera);
+				if (mousePosition.x >= 0 && mousePosition.x <= image.width
+					&& mousePosition.y >= 0 && mousePosition.y <= image.height)
+				{
+					Color color = GetImageColor(image, (int)mousePosition.x, (int)mousePosition.y);
+					const int size = 11;
+					char hex[size];
+					bzero(hex, size);
+					int ret = snprintf(hex, size, "#%X", ColorToInt(color));
+					if (ret < 0 || ret > size || save_to_clipboard(hex))
+					{
+						break;
+					}
+				}
+		}
 		else if (IsKeyPressed(KEY_C))
 			showCursor = !showCursor;
 		else
 			handle_zoom(&camera, &flashlightRadius.x, isFlashlightMode);
+
 		BeginDrawing();
 		BeginMode2D(camera);
 		ClearBackground(backgroundColor);
+
 		DrawTexture(texture, 0, 0, WHITE);
 		if (isFlashlightMode)
 		{
@@ -147,6 +173,7 @@ int main(void)
 	UnloadRenderTexture(target);
 	UnloadShader(flashlightShader);
 	UnloadTexture(texture);
+	UnloadImage(image);
 	remove(filename);
 	CloseWindow();
 	return (0);

@@ -12,6 +12,7 @@ int take_screenshot(const char *filename, const int width, const int height);
 int get_screen_width(void);
 int get_screen_height(void);
 void get_mouse_position(int *x, int *y);
+int save_to_clipboard(const char *text);
 
 #if defined(_WIN32)
 // Copied from https://github.com/raysan5/raylib/issues/1217#issuecomment-618428626
